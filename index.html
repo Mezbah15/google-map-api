@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vidgan GMap Api</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <script src="https://maps.googleapis.com/maps/api/js"></script>
+</head>
+<body>
+    <h2 class="text-center">Geolocation, Reverse Geolocation, Routing, and Distance Matrix</h2>
+        <hr>
+    <h5 class="text-center text-body-secondary">Map</h5>
+        <div id="map" style="height: 400px; margin-bottom: 40px;"></div>
+<section id="Geolocation">
+        <h5 class="text-center">Geolocation and Reverse Geolocation</h5>
+    <div class="container text-center border border-dark-subtle" style="margin-bottom: 50px; padding: 2rem;">
+        <div class="row">
+            <div class="col">
+                <div>
+                    <label for="pincode">Pin Code:</label>
+                    <input type="number" id="pincode" placeholder="Enter pin code">
+                    <button onclick="getAddress()" class="btn btn-info btn-sm" style="margin: 0 5px;">Get Address</button>
+                </div>
+                <div>
+                    <label for="address" style="margin:10px 0;">Address:</label>
+                    <span id="address"></span>
+                </div>
+            </div>
+            <div class="col">
+                <div>
+                    <label for="address2">Address:</label>
+                    <input type="text" id="address2" placeholder="Enter address">
+                    <button onclick="getPincode()" class="btn btn-info btn-sm" style="margin: 0 5px;">Get Pin Code</button>
+                </div>
+                <div>
+                    <label for="pincode2" style="margin:10px 0;">Pin Code:</label>
+                    <span id="pincode2"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="route">
+    <h5 class="text-center">Route Directions</h5>
+    <div class="container text-center border border-dark-subtle" style="margin-bottom: 50px; padding: 2rem;">
+        <div class="row">
+            <div class="col">
+                <div>
+                <label for="route-origin">Origin:</label>
+                <input type="text" class="form-control" id="route-origin" placeholder="Enter origin" value="">
+                </div>
+            </div>
+        <div class="col">
+            <div>
+                <label for="route-destination">Destination:</label>
+                <input type="text" class="form-control" id="route-destination" placeholder="Enter destination" value="">
+            </div>
+        </div>
+            <div>
+                <button class="btn btn-info btn-md" onclick="calculateRoute()" style="margin: 15px 0;">Get Route</button>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="distance-calculattion">
+    <h5 class="text-center">Distance Matrix</h5>
+    <div class="container text-center border border-dark-subtle" style="margin-bottom: 50px; padding: 2rem;">
+        <div class="row">
+            <div class="col">
+                <div>
+                <label for="distance-origin">Origin Pin Code:</label>
+                <input type="number" class="form-control" id="distance-origin" placeholder="Enter origin pin code" value="">
+                </div>
+            </div>
+        <div class="col">
+            <div>
+                <label for="distance-destination">Destination Pin Code:</label>
+                <input type="number" class="form-control" id="distance-destination" placeholder="Enter destination pin code" value="">
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <button class="btn btn-info btn-md" onclick="calculateDistance()" style="margin: 15px 0;">Calculate Distance</button>
+        </div>
+        <div class="col">
+            <label for="distance" style="margin:10px 0;">Distance:</label>
+            <span id="distance"></span>
+        </div>
+    </div>
+</div>
+</section>
+
+<script>
+     const mapOptions = {
+      center: { lat: 22.5726, lng: -88.3639 }, 
+      zoom: 12
+    };
+    const map = new google.maps.Map(document.getElementById("map"), mapOptions);
+    const directionsService = new google.maps.DirectionsService();
+    const directionsDisplay = new google.maps.DirectionsRenderer();
+    directionsDisplay.setMap(map);
+    // User input a pin code and get the physical address
+    function getAddress() {
+      const pincode = document.getElementById("pincode").value;
+
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ 'address': pincode }, function(results, status) {
+        if (status === google.maps.GeocoderStatus.OK) {
+          if (results[0]) {
+            const address = results[0].formatted_address;
+            document.getElementById("address").textContent = address;
+          } else {
+            document.getElementById("address").textContent = "No results found.";
+          }
+        } else {
+          document.getElementById("address").textContent = "Geocoder failed due to: " + status;
+        }
+      });
+    }
+
+// Reverse Geolocation
+    function getPincode() {
+      const address = document.getElementById("address2").value;
+
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ 'address': address }, function(results, status) {
+        if (status === google.maps.GeocoderStatus.OK) {
+          if (results[0]) {
+            const pincode2 = getPincodeFromAddressComponents(results[0].address_components);
+            document.getElementById("pincode2").textContent = pincode2;
+          } else {
+            document.getElementById("pincode2").textContent = "No results found.";
+          }
+        } else {
+          document.getElementById("pincode2").textContent = "Geocoder failed due to: " + status;
+        }
+      });
+    }
+
+    function getPincodeFromAddressComponents(components) {
+      for (let i = 0; i < components.length; i++) {
+        const types = components[i].types;
+        if (types.includes('postal_code')) {
+          return components[i].short_name;
+        }
+      }
+      return "Pin code not found";
+    }
+// Route Direction
+
+    function calculateRoute() {
+      const routeOrigin = document.getElementById("route-origin").value;
+      const routeDestination = document.getElementById("route-destination").value;
+
+      const request = {
+        origin: routeOrigin,
+        destination: routeDestination,
+        travelMode: google.maps.TravelMode.DRIVING
+      };
+
+      directionsService.route(request, function(result, status) {
+        if (status === google.maps.DirectionsStatus.OK) {
+          directionsDisplay.setDirections(result);
+        } else {
+          console.log("Error: " + status);
+        }
+      });
+    }
+
+//  Distance Calculation
+    function calculateDistance() {
+      const origin = document.getElementById("distance-origin").value;
+      const destination = document.getElementById("distance-destination").value;
+
+      const distanceService = new google.maps.DistanceMatrixService();
+      const matrixRequest = {
+        origins: [origin],
+        destinations: [destination],
+        travelMode: google.maps.TravelMode.DRIVING
+      };
+
+      distanceService.getDistanceMatrix(matrixRequest, function(response, status) {
+        if (status === google.maps.DistanceMatrixStatus.OK) {
+          const distance = response.rows[0].elements[0].distance.text;
+          document.getElementById("distance").textContent = distance;
+        } else {
+          document.getElementById("distance").textContent = "Error calculating distance.";
+        }
+      });
+    }
+
+</script>
+</body>
+</html>
